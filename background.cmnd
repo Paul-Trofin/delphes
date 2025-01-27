@@ -1,0 +1,17 @@
+! BACKGROUND
+! number of events to generate
+Main:numberOfEvents = 10000
+
+! BEAM SETTINGS
+Beams:idA = 2212 
+Beams:idB = 2212
+Beams:eCM = 13600
+
+! PROCESS
+WeakDoubleBoson:ffbar2gmZgmZ = on
+WeakZ0:gmZmode = 2 ! include only Z decays
+
+! Force Z decays to e- e+
+23:onMode = off
+23:onIfAny = 11 -11
+
