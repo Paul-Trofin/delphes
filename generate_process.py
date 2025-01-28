@@ -11,7 +11,7 @@ idA = "2212"
 idB = "2212"
 eCM = "13600"
 ### PROCESS in PYTHIA8 FORMAT
-py8Process = "WeakDoubleBoson:ffbar2gmZgmZ = on"
+py8Process = "WeakBosonAndParton:qqbar2gmZg = on"
 ### OPTIONS in PYTHIA8 FORMAT
 opt1 = "WeakZ0:gmZmode = 2 ! include only Z decays"
 opt2 = "! Force Z decays to e- e+"
@@ -48,11 +48,11 @@ with open(file_path, "w") as file:
     file.write(opt3 + "\n")
     file.write(opt4 + "\n")
 
-print("** THE FILES HAVE BEEN GENERATED.")
+print(f"** DELPHES PYTHIA8 COMMAND ({name}.cmnd) HAS BEEN GENERATED.")
 
-##############################################################
+##############################################################################
 ######### THIS IS THE MODIFIED ROOT SCRIPT FOR GENERATING BACKGROUND #########
-##############################################################
+##############################################################################
 
 root_script = f'''
 //////////////////////////////////////////////////////////////////////
@@ -146,4 +146,3 @@ with open(root_file_path, "w") as root_file:
     root_file.write(root_script)
 
 print(f"** ROOT SCRIPT ({name}.C) HAS BEEN GENERATED.")
-
