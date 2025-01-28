@@ -1,0 +1,71 @@
+///////////////////////////////////////////////////////////////
+///////////// GENERATE SIGNAL AND BACKGROUND TREES ////////////
+///////////////////////////////////////////////////////////////
+// Run like this:
+// root make_signal_background_trees.C
+void make_signal_background_trees() {
+    // Open ROOT files
+    TFile* signalFile = TFile::Open("invariant_mass.root");
+    TFile* backgroundFile = TFile::Open("background_m_ee.root");
+
+    // Check if files were opened successfully
+    if (!signalFile || !signalFile->IsOpen()) {
+        std::cerr << "Error: Could not open signal file 'invariant_mass.root'!" << std::endl;
+        return;
+    }
+    if (!backgroundFile || !backgroundFile->IsOpen()) {
+        std::cerr << "Error: Could not open background file 'background_m_ee.root'!" << std::endl;
+        return;
+    }
+
+    // Retrieve histograms from the ROOT files
+    TH1D* signalHist = (TH1D*)signalFile->Get("hist_m_ee");
+    if (!signalHist) {
+        std::cerr << "Error: 'hist_m_ee' not found in the signal file!" << std::endl;
+        return;
+    }
+
+    TH1D* backgroundHist = (TH1D*)backgroundFile->Get("hist_m_ee_back");
+    if (!backgroundHist) {
+        std::cerr << "Error: 'hist_m_ee_back' not found in the background file!" << std::endl;
+        return;
+    }
+
+    // Create output file for the new trees
+    TFile* outputFile = TFile::Open("signal_background_trees.root", "RECREATE");
+
+    // Create trees
+    TTree* signalTree = new TTree("SignalTree", "Signal events");
+    TTree* backgroundTree = new TTree("BackgroundTree", "Background events");
+
+    // Add a branch for invariant mass
+    Float_t invariant_mass;
+    signalTree->Branch("invariant_mass", &invariant_mass, "invariant_mass/F");
+    backgroundTree->Branch("invariant_mass", &invariant_mass, "invariant_mass/F");
+
+    // Fill signal tree
+    for (int bin = 1; bin <= signalHist->GetNbinsX(); bin++) {
+        invariant_mass = signalHist->GetBinCenter(bin);
+        int nEvents = signalHist->GetBinContent(bin);
+        for (int i = 0; i < nEvents; i++) {
+            signalTree->Fill();
+        }
+    }
+
+    // Fill background tree
+    for (int bin = 1; bin <= backgroundHist->GetNbinsX(); bin++) {
+        invariant_mass = backgroundHist->GetBinCenter(bin);
+        int nEvents = backgroundHist->GetBinContent(bin);
+        for (int i = 0; i < nEvents; i++) {
+            backgroundTree->Fill();
+        }
+    }
+
+    // Write trees to the output file
+    signalTree->Write();
+    backgroundTree->Write();
+    outputFile->Close();
+
+    std::cout << "Histograms converted to trees and saved in 'signal_background_trees.root'!" << std::endl;
+}
+
