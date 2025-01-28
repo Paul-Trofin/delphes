@@ -8,16 +8,6 @@ void make_signal_background_trees() {
     TFile* signalFile = TFile::Open("invariant_mass.root");
     TFile* backgroundFile = TFile::Open("background_m_ee.root");
 
-    // Check if files were opened successfully
-    if (!signalFile || !signalFile->IsOpen()) {
-        std::cerr << "Error: Could not open signal file 'invariant_mass.root'!" << std::endl;
-        return;
-    }
-    if (!backgroundFile || !backgroundFile->IsOpen()) {
-        std::cerr << "Error: Could not open background file 'background_m_ee.root'!" << std::endl;
-        return;
-    }
-
     // Retrieve histograms from the ROOT files
     TH1D* signalHist = (TH1D*)signalFile->Get("hist_m_ee");
     if (!signalHist) {
