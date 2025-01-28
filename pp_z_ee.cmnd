@@ -1,3 +1,6 @@
+!!! COMMAND FILE TO GENERATE SIGNAL FOR f f > z > e- e+
+!!! RUN LIKE THIS:
+!!! ./DelphesPythia8 cards/delphes_card_ATLAS.tcl simulations/pp_z_ee/1e3_events/pp_z_ee.cmnd simulations/pp_z_ee/1e3_events/pp_z_ee.root > pp_z_ee.log
 ! number of events to generate
 Main:numberOfEvents = 1000
 
