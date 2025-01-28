@@ -1,5 +1,12 @@
+##############################################################
+######### MACRO PYTHON FILE TO GENERATE .cmnd and .C #########
+####### This is only a script that writes other files ########
+##############################################################
 import os
 
+##############################################################
+######################## OPTIONS #############################
+##############################################################
 ### NAME 
 name = "qq_gz"
 ### PROCESS 
@@ -17,6 +24,7 @@ opt1 = "WeakZ0:gmZmode = 2 ! include only Z decays"
 opt2 = "! Force Z decays to e- e+"
 opt3 = "23:onMode = off"
 opt4 = "23:onIfAny = 11 -11"
+##############################################################
 
 # CREATE FOLDER
 folder_path = name
@@ -51,7 +59,8 @@ with open(file_path, "w") as file:
 print(f"** DELPHES PYTHIA8 COMMAND ({name}.cmnd) HAS BEEN GENERATED.")
 
 ##############################################################################
-######### THIS IS THE MODIFIED ROOT SCRIPT FOR GENERATING BACKGROUND #########
+############# THIS IS THE MODIFIED ROOT SCRIPT FOR GENERATING .C #############
+######################## used GPT for faster writting ########################
 ##############################################################################
 
 root_script = f'''
