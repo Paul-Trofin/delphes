@@ -10,16 +10,7 @@ void make_signal_background_trees() {
 
     // Retrieve histograms from the ROOT files
     TH1D* signalHist = (TH1D*)signalFile->Get("hist_m_ee");
-    if (!signalHist) {
-        std::cerr << "Error: 'hist_m_ee' not found in the signal file!" << std::endl;
-        return;
-    }
-
     TH1D* backgroundHist = (TH1D*)backgroundFile->Get("hist_m_ee_back");
-    if (!backgroundHist) {
-        std::cerr << "Error: 'hist_m_ee_back' not found in the background file!" << std::endl;
-        return;
-    }
 
     // Create output file for the new trees
     TFile* outputFile = TFile::Open("signal_background_trees.root", "RECREATE");
