@@ -10,7 +10,7 @@ import os
 ### NAME 
 name = "qq_gz"
 ### PROCESS 
-process = "q q > z z > e e"
+process = "q q > z z > 4e"
 ### NUMBER OF EVENTS
 Nevents = "10000"
 ### BEAM SETTINGS
