@@ -73,7 +73,7 @@ root_script = f'''
 //////////////////////////////////////////////////////////////////////
 
 #ifdef __CLING__
-R__LOAD_LIBRARY("/home/paul/delphes/libDelphes.so")
+R__LOAD_LIBRARY(/home/paul/delphes/libDelphes.so)
 gInterpreter->AddIncludePath("/home/paul/delphes/external/ExRootAnalysis/");
 gInterpreter->AddIncludePath("/home/paul/delphes/classes/");
 #endif
@@ -140,7 +140,7 @@ void {name}(const char *inputFile) {{
     }}
 
     // SAVE histogram to file
-    TFile outFile("{name}.root", "RECREATE");
+    TFile outFile("{name}_m_ee.root", "RECREATE");
     tree_m_ee->Write();
     outFile.Close();
 
@@ -154,4 +154,4 @@ root_file_path = os.path.join(folder_path, f"{name}.C")
 with open(root_file_path, "w") as root_file:
     root_file.write(root_script)
 
-print(f"** ROOT SCRIPT ({name}.C) HAS BEEN GENERATED.")
+print(f"** ROOT SCRIPT ({name}_m_ee.C) HAS BEEN GENERATED.")
