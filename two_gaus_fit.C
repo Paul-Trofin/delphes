@@ -1,8 +1,6 @@
-///////////////////////////////////////////////////////
-///////////// PERFORM TWO GAUSSIAN FITS ///////////////
-///////////////////////////////////////////////////////
 // RUN LIKE THIS:
-// root -l two_gaus_fit.C'("qq_gz_m_ee.root")'
+// root -l two_gaus_fit.C'("ff_z_ee_m_ee.root")'
+// Include the necessary ROOT headers
 #include <TCanvas.h>
 #include <TH1F.h>
 #include <TF1.h>
@@ -13,8 +11,11 @@
 
 // Function to perform the fit and plot
 void two_gaus_fit(const char *inputFile) {
-    TFile *file = TFile::Open(inputFile);
-    TTree *tree_m_ee = (TTree*)file->Get("tree_m_ee");
+    // Open the root file containing the tree
+    TFile *File = TFile::Open(inputFile);
+
+    // Retrieve the tree
+    TTree *tree_m_ee = (TTree*)File->Get("tree_m_ee");
 
     // Create histogram to store the m_ee values
     TH1F *hist_m_ee = new TH1F("hist_m_ee", "Invariant Mass of e- e+ pairs", 100, 70, 110);
@@ -119,4 +120,3 @@ void two_gaus_fit(const char *inputFile) {
     // SAVE CANVAS
     c1->SaveAs("m_ee_plot.png");
 }
-
