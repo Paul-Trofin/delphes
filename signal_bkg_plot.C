@@ -3,7 +3,7 @@
 // THE FIRST FILE IS THE SIGNAL
 // THE FOLLOWING FILES ARE BACKGROUNG
 // RUN LIKE THIS:
-// root -l signal_bkg_plot.C'("ff_z_ee/ff_z_ee_m_ee.root", "ff_zz_4e/ff_zz_4e_m_ee.root", "qg_qz/qg_qz_m_ee.root", "qq_gz/qq_gz_m_ee.root")'
+// root -l signal_bkg_plot.C'("ff_z_ee/ff_z_ee_m_ee.root", "ff_zz_4e/ff_zz_4e_m_ee.root", "qg_qz/qg_qz_m_ee.root", "qq_gz/qq_gz_m_ee.root", "ff_za/ff_za_m_ee.root", "fa_fz/fa_fz_m_ee.root")'
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <TCanvas.h>
@@ -14,7 +14,7 @@
 #include <TPaveText.h>
 #include <TStyle.h>
 
-void signal_bkg_plot(const char* inputFile0, const char* inputFile1, const char* inputFile2, const char* inputFile3) {
+void signal_bkg_plot(const char* inputFile0, const char* inputFile1, const char* inputFile2, const char* inputFile3, const char* inputFile4, const char* inputFile5) {
     // Open signal file
     TFile* file0 = TFile::Open(inputFile0);
     if (!file0) {
@@ -74,26 +74,52 @@ void signal_bkg_plot(const char* inputFile0, const char* inputFile1, const char*
         file3->Close();
         return;
     }
+    
+    // Open 4rd bkg file
+    TFile* file4 = TFile::Open(inputFile4);
+    if (!file4) {
+        std::cerr << "** ERROR: Could not open file " << inputFile4 << std::endl;
+        return;
+    }
+
+    // Get 4rd bkg tree
+    TTree* tree4 = (TTree*)file4->Get("tree_m_ee");
+    if (!tree4) {
+        std::cerr << "** ERROR: Could not find tree 'tree_m_ee' in file " << inputFile4 << std::endl;
+        file4->Close();
+        return;
+    }
+    
+    // Open 5rd bkg file
+    TFile* file5 = TFile::Open(inputFile5);
+    if (!file5) {
+        std::cerr << "** ERROR: Could not open file " << inputFile5 << std::endl;
+        return;
+    }
+
+    // Get 5rd bkg tree
+    TTree* tree5 = (TTree*)file5->Get("tree_m_ee");
+    if (!tree5) {
+        std::cerr << "** ERROR: Could not find tree 'tree_m_ee' in file " << inputFile5 << std::endl;
+        file5->Close();
+        return;
+    }
 
     // Create histograms to store the m_ee values for the signal and backgrounds
-    TH1F* hist0 = new TH1F("hist0", "Invariant Mass of e- e+ pairs (Signal + Background)", 100, 70, 110);
-    // Set hist0 to be black and filled black
-    hist0->SetLineColor(kBlack);  // Set the line color to black
-    hist0->SetFillColor(kBlack);  // Set the fill color to black
-    hist0->SetFillStyle(1001);    // Solid fill style
-    hist0->SetLineColor(kBlack);
-    tree0->Draw("m_ee>>hist0");
-
-    TH1F* hist1 = new TH1F("hist1", "Invariant Mass of e- e+ pairs (Bkg 1)", 100, 70, 110);
-
-    TH1F* hist2 = new TH1F("hist2", "Invariant Mass of e- e+ pairs (Bkg 2)", 100, 70, 110);
-
-    TH1F* hist3 = new TH1F("hist3", "Invariant Mass of e- e+ pairs (Bkg 3)", 100, 70, 110);
+    TH1F* hist0 = new TH1F("hist0", "", 100, 70, 110);
+    TH1F* hist1 = new TH1F("hist1", "", 200, 66, 116);
+    TH1F* hist2 = new TH1F("hist2", "", 200, 66, 116);
+    TH1F* hist3 = new TH1F("hist3", "", 200, 66, 116);
+    TH1F* hist4 = new TH1F("hist4", "", 200, 66, 116);
+    TH1F* hist5 = new TH1F("hist5", "", 200, 66, 116);
 
     // Fill background histograms
+    tree0->Draw("m_ee>>hist0");
     tree1->Draw("m_ee>>hist1");
     tree2->Draw("m_ee>>hist2");
     tree3->Draw("m_ee>>hist3");
+    tree4->Draw("m_ee>>hist4");
+    tree5->Draw("m_ee>>hist5");
 
     // Create a new histogram for the sum of the backgrounds
     TH1F* hist_bkg_1 = (TH1F*)hist1->Clone("hist1");
@@ -104,6 +130,17 @@ void signal_bkg_plot(const char* inputFile0, const char* inputFile1, const char*
     TH1F* hist_bkg_123 = (TH1F*)hist1->Clone("hist1");
     hist_bkg_123->Add(hist2);
     hist_bkg_123->Add(hist3);
+    
+    TH1F* hist_bkg_1234 = (TH1F*)hist1->Clone("hist1");
+    hist_bkg_1234->Add(hist2);
+    hist_bkg_1234->Add(hist3);
+    hist_bkg_1234->Add(hist4);
+    
+    TH1F* hist_bkg_12345 = (TH1F*)hist1->Clone("hist1");
+    hist_bkg_12345->Add(hist2);
+    hist_bkg_12345->Add(hist3);
+    hist_bkg_12345->Add(hist4);
+    hist_bkg_12345->Add(hist5);
 
     
     // PLOT on CANVAS
@@ -116,20 +153,47 @@ void signal_bkg_plot(const char* inputFile0, const char* inputFile1, const char*
     float maxHist0 = hist0->GetMaximum();
     float maxHistBkg = hist_bkg_123->GetMaximum();
     hist0->SetMaximum(1.2 * std::max(maxHist0, maxHistBkg));  // Increase range for clarity
-
-    hist0->Draw();
-
-    hist_bkg_1->SetLineColor(kRed);  // Red for the combined background
-    hist_bkg_1->Draw("SAME");
+	
+	// Draw Background5
+    hist_bkg_12345->SetLineColor(kBlack);
+    hist_bkg_12345->SetFillColor(kBlue+2);  
+    hist_bkg_12345->SetFillStyle(1001);    // fill style
+    hist_bkg_12345->Draw("SAME");
     
-    hist_bkg_12->SetLineColor(kGreen);  // Red for the combined background
+	// Draw Background4
+    hist_bkg_1234->SetLineColor(kBlack);
+    hist_bkg_1234->SetFillColor(kGreen+2);  
+    hist_bkg_1234->SetFillStyle(1001);    // fill style
+    hist_bkg_1234->Draw("SAME");
+    
+	// Draw Background3
+    hist_bkg_123->SetLineColor(kBlack);
+    hist_bkg_123->SetFillColor(kViolet+2);  
+    hist_bkg_123->SetFillStyle(1001);    // fill style
+    hist_bkg_123->Draw("SAME");
+    
+    // Draw Background2
+    hist_bkg_12->SetLineColor(kBlack);
+    hist_bkg_12->SetFillColor(kRed+2);  
+    hist_bkg_12->SetFillStyle(1001);    // fill style
     hist_bkg_12->Draw("SAME");
     
-    hist_bkg_123->SetLineColor(kViolet);  // Red for the combined background
-    hist_bkg_123->Draw("SAME");
+    // Draw Background1
+    hist_bkg_1->SetLineColor(kBlack);
+    hist_bkg_1->SetFillColor(kYellow+2);  
+    hist_bkg_1->SetFillStyle(1001);    // fill style
+    hist_bkg_1->Draw("SAME");
+    
+    // Draw Signal
+    hist0->SetLineColor(kBlack);
+    hist0->SetFillColor(kGray+2);  
+    hist0->SetFillStyle(1001);    // fill style
+    hist0->Draw("SAME");
+    
+    gPad->RedrawAxis();
+    c1->Update();
 
     // Save the canvas as an image
     c1->SaveAs("signal_bkg_plot.png");
 }
-
 
