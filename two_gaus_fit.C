@@ -1,5 +1,5 @@
 // RUN LIKE THIS:
-// root -l two_gaus_fit.C'("ff_z_ee_m_ee.root")'
+// root -l two_gaus_fit.C'("ff_za_m_ee.root")'
 // Include the necessary ROOT headers
 #include <TCanvas.h>
 #include <TH1F.h>
@@ -26,6 +26,9 @@ void two_gaus_fit(const char *inputFile) {
     gStyle->SetOptStat(0);
     hist_m_ee->GetXaxis()->SetTitle("m_ee (GeV)");
     hist_m_ee->GetYaxis()->SetTitle("(Counts / GeV)");
+    hist_m_ee->SetLineColor(kBlack);
+    hist_m_ee->SetFillColor(kBlue-10);
+    hist_m_ee->SetFillStyle(1001);
     hist_m_ee->Draw();
 
     // FIT the Histogram with FIRST GAUSSIAN
