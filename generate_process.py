@@ -1,6 +1,6 @@
 ##############################################################
 ######### MACRO PYTHON FILE TO GENERATE .cmnd and .C #########
-####### This is only a script that writes other files ########
+##### This script generates files for ./DelphesPythia8 #######
 ##############################################################
 import os
 
@@ -8,9 +8,9 @@ import os
 ######################## OPTIONS #############################
 ##############################################################
 ### NAME 
-name = "qq_gz"
+name = "fa_fz"
 ### PROCESS 
-process = "q q > z z > 4e"
+process = "f a > f z"
 ### NUMBER OF EVENTS
 Nevents = "10000"
 ### BEAM SETTINGS
@@ -18,7 +18,7 @@ idA = "2212"
 idB = "2212"
 eCM = "13600"
 ### PROCESS in PYTHIA8 FORMAT
-py8Process = "WeakBosonAndParton:qqbar2gmZg = on"
+py8Process = "WeakBosonAndParton:fgm2gmZf = on"
 ### OPTIONS in PYTHIA8 FORMAT
 opt1 = "WeakZ0:gmZmode = 2 ! include only Z decays"
 opt2 = "! Force Z decays to e- e+"
