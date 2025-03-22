@@ -8,7 +8,7 @@ import os
 ######################## OPTIONS #############################
 ##############################################################
 ### NAME 
-name = "ff_gm_ee"
+name = "ff_ZZ"
 ### PROCESS 
 process = "f f~ > gm > e- e+"
 ### NUMBER OF EVENTS
@@ -19,28 +19,42 @@ idB = "2212"
 eCM = "13600"
 ### PROCESS in PYTHIA8 FORMAT
 options = []
-options.append("WeakSingleBoson:ffbar2gmZ = on")
-options.append("WeakSingleBoson:ffbar2ffbar(s:gm) = on")
-options.append("WeakSingleBoson:ffbar2ffbar(s:gmZ) = on")
+options.append("")
+options.append("! Hard Process")
 options.append("WeakDoubleBoson:ffbar2gmZgmZ = on")
-options.append("WeakBosonAndParton:qqbar2gmZg = on")
-options.append("WeakBosonAndParton:qg2Wq = on")
-options.append("WeakBosonAndParton:qg2gmZq = on")
-options.append("WeakBosonAndParton:ffbar2gmZgm = on")
+options.append("WeakZ0:gmZmode = 2 ! include only gamma decays")
 
-#options.append("PartonLevel:MPI = off")
-#options.append("HadronLevel:Hadronize = off")
-#options.append("WeakZ0:gmZmode = 1 ! include only gamma decays")
+### PARTON LEVEL
+options.append("")
+options.append("! Parton Level")
+options.append("PartonLevel:MPI = off")
+options.append("PartonLevel:ISR = on")
+options.append("PartonLevel:FSR = on")
+
+### HADRON LEVEL
+options.append("")
+options.append("! Hadron Level")
+options.append("HadronLevel:Hadronize = on")
+
+### DECAY OPTIONS
+options.append("")
 options.append("! Force gamma decays to e- e+")
 options.append("22:onMode = off")
 options.append("22:onIfAny = 11 -11")
+options.append("")
 options.append("! Force Z decays to e- e+")
 options.append("23:onMode = off")
 options.append("23:onIfAny = 11 -11")
-options.append("24:onMode = off")       # Turn off all W+ decays
-options.append("24:onIfAny = 11 12")    # Allow only W+ → e+ ν_e
-options.append("-24:onMode = off")      # Turn off all W- decays
-options.append("-24:onIfAny = -11 -12") # Allow only W- → e- ν̅_e
+options.append("")
+options.append("! Force W-+ decays to e-+ ve+-")
+options.append("24:onMode = off")       
+options.append("24:onIfAny = 11 12")    
+options.append("-24:onMode = off")      
+options.append("-24:onIfAny = -11 -12")
+
+### PHASE SPACE CUTS
+options.append("")
+#options.append("PhaseSpace:pTHatMin = 10.0") 
 ##############################################################
 print(" ______________________________________________________________")
 print("|                                                              |")
@@ -109,13 +123,17 @@ print(f"          ** ANALYSIS FILES:")
 ##############################################################################
 root_script = f'''
 //////////////////////////////////////////////////////////////////////
-////////////////// INVARIANT MASS OF e- e+ PAIRS /////////////////////
+///////////////// GENERATE ANALYSIS TREE VARIABLES ///////////////////
 /////////////// READS INPUT FROM DELPHES-ROOT FILE ///////////////////
 //////////////////////////////////////////////////////////////////////
 //// RUN LIKE THIS:
 //// root -l get_variables.C'("{name}.root")'
 //////////////////////////////////////////////////////////////////////
 
+
+//////////////////////////////////////////////////////////////////////
+///////////////////////////// LIBRARIES //////////////////////////////
+//////////////////////////////////////////////////////////////////////
 #ifdef __CLING__
 R__LOAD_LIBRARY(/home/paul/delphes/libDelphes.so)
 gInterpreter->AddIncludePath("/home/paul/delphes/external/ExRootAnalysis/");
@@ -125,9 +143,15 @@ gInterpreter->AddIncludePath("/home/paul/delphes/classes/");
 #include "ExRootTreeReader.h"
 #include "DelphesClasses.h"
 
+//////////////////////////////////////////////////////////////////////
+///////////////////////////// FUNCTIONS //////////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////
+////////////////////////////// MAIN CODE /////////////////////////////
+//////////////////////////////////////////////////////////////////////
 void get_variables(const char *inputFile) {{
-    // Load Delphes library
-    gSystem->Load("/home/paul/delphes/libDelphes.so");
 
     // TChain
     TChain chain("Delphes");
@@ -137,69 +161,171 @@ void get_variables(const char *inputFile) {{
     ExRootTreeReader *treeReader = new ExRootTreeReader(&chain);
     Long64_t Nevents = treeReader->GetEntries();
 
-    // Point to the Particle branch
-    TClonesArray *branchParticle = treeReader->UseBranch("Particle");
+    //////////////////////////////////////////////////////////////////////
+    /////////////////////// GET PARTICLES & JETS /////////////////////////
+    //////////////////////////////////////////////////////////////////////
+    TClonesArray *branchElectron = treeReader->UseBranch("Electron");
+    TClonesArray *branchJet = treeReader->UseBranch("Jet");
+    TClonesArray *branchMissingET = treeReader->UseBranch("MissingET");
 
-    // Initialize tree
-    TTree *ElectronPairs = new TTree("ElectronPairs", "");
-    
-    double m_ee, pT_ee, eta_ee, phi_ee;
-    
-    ElectronPairs->Branch("m_ee", &m_ee, "m_ee/D");
-    ElectronPairs->Branch("pT_ee", &pT_ee, "pT_ee/D");
-    ElectronPairs->Branch("eta_ee", &eta_ee, "eta_ee/D");
-    ElectronPairs->Branch("phi_ee", &phi_ee, "phi_ee/D");
+    //////////////////////////////////////////////////////////////////////
+    //////////////////////////// CREATE TREES ////////////////////////////
+    //////////////////////////////////////////////////////////////////////
+	// Electrons Tree
+    struct P4 {{
+        double E, Px, Py, Pz, Pt;
+    }};
+    struct Angle {{
+        double eta, phi, theta;
+    }};
 
-    // Loop over events
+    int N_electrons = 0, N_positrons = 0, N_electron_pairs = 0, N_jets = 0;
+    double m_ee = 0, deltaR_ee = 0, MET = 0, Zjet_phi = 0, jets_mass = 0, best_deltaR_ee = 0, best_Z_pT = 0;
+
+	TTree* Electrons = new TTree("Electrons", "");
+    TTree* Positrons = new TTree("Positrons", "");
+    TTree* ElectronPairs = new TTree("Dielectrons", "");
+    TTree* Jets = new TTree("Jets", "");
+    TTree* BDT = new TTree("BDT", "");
+
+    // Main branches for the number of entries
+    Electrons->Branch("NumberOfElectrons", &N_electrons, "N_electrons/I");
+    Positrons->Branch("NumberOfPositrons", &N_positrons, "N_positrons/I");
+    ElectronPairs->Branch("NumberOfElectronPairs", &N_electron_pairs, "N_electron_pairs/I");
+    Jets->Branch("JetMultiplicity", &N_jets, "N_jets/I");
+
+    // Sub-branches
+    P4 e_p4, e_bar_p4, Z_p4, jet_p4;
+    Angle e_angle, e_bar_angle, Z_angles, jet_angle;
+    Electrons->Branch("electron_p4", &e_p4, "E/D:Px/D:Py/D:Pz/D:Pt/D");
+    Electrons->Branch("electron_angle", &e_angle, "eta/D:phi/D:theta/D");
+    Positrons->Branch("positron_p4", &e_bar_p4, "E/D:Px/D:Py/D:Pz/D:Pt/D");
+    Positrons->Branch("positron_angle", &e_bar_angle, "eta/D:phi/D:theta/D");
+    ElectronPairs->Branch("DielectronMass", &m_ee, "m_ee/D");
+    ElectronPairs->Branch("deltaR_ee", &deltaR_ee, "deltaR_ee/D");
+    ElectronPairs->Branch("Z_p4", &Z_p4, "E/D:Px/D:Py/D:Pz/D:Pt/D");
+    ElectronPairs->Branch("Z_angles", &Z_angles, "eta/D:phi/D:theta/D");
+    Jets->Branch("jet_p4", &jet_p4, "E/D:Px/D:Py/D:Pz/D:Pt/D");
+    Jets->Branch("jet_angle", &jet_angle, "eta/D:phi/D:theta/D");
+    Jets->Branch("JetMultiplicity", &N_jets, "N_jets/I");
+    BDT->Branch("best_deltaR_ee", &best_deltaR_ee, "best_deltaR_ee/D");
+    BDT->Branch("best_Z_pT", &best_Z_pT, "best_Z_pT/D"); 
+    BDT->Branch("JetMultiplicity", &N_jets, "N_jets/I");
+    
+
+    //////////////////////////////////////////////////////////////////////
+    ////////////////////////// LOOP OVER EVENTS //////////////////////////
+    //////////////////////////////////////////////////////////////////////
     for (int event = 0; event < Nevents; event++) {{
         treeReader->ReadEntry(event);
+        std::vector<TLorentzVector> Selectrons, Spositrons, Sjets;
 
-        // Store electrons and positrons
-        std::vector<TLorentzVector> electrons, positrons;
-
-        // Loop over particles
-        for (int i = 0; i < branchParticle->GetEntries(); i++) {{
-            // Get particle i
-            GenParticle *particle = (GenParticle *)branchParticle->At(i);
-            int pid = particle->PID;
-
-            // Store electrons and positrons
-            if (pid == 11) {{ // electron
-                TLorentzVector p4 = particle->P4();
-                electrons.push_back(p4);
-
+        //////////////////////////////////////////////////////////////////////
+        //////////////////////// LOOP OVER PARTICLES /////////////////////////
+        //////////////////////////////////////////////////////////////////////
+        for (int i = 0; i < branchElectron->GetEntries(); i++) {{
+            Electron *particle = (Electron*) branchElectron->At(i);
+            TLorentzVector p4 = particle->P4();
+            if (particle->Charge == -1 && particle->PT > 27) {{
+                e_p4.E = p4.E();
+                e_p4.Px = p4.Px();
+                e_p4.Py = p4.Py();
+                e_p4.Pz = p4.Pz();
+                e_p4.Pt = p4.Pt();
+                e_angle.eta = p4.Eta();
+                e_angle.phi = p4.Phi();
+                e_angle.theta = p4.Theta();
+                Selectrons.push_back(p4);
+                Electrons->Fill();
+            }}
+            if (particle->Charge == 1 && particle->PT > 27) {{
+                e_bar_p4.E = p4.E();
+                e_bar_p4.Px = p4.Px();
+                e_bar_p4.Py = p4.Py();
+                e_bar_p4.Pz = p4.Pz();
+                e_bar_p4.Pt = p4.Pt();
+                e_bar_angle.eta = p4.Eta();
+                e_bar_angle.phi = p4.Phi();
+                e_bar_angle.theta = p4.Theta();
+                Spositrons.push_back(p4);
+                Positrons->Fill();
             }}
 
-            if (pid == -11) {{ // positron
-                TLorentzVector p4 = particle->P4();
-                positrons.push_back(p4);
-            }}
         }}
 
-        // Calculate Kinematic variables
-        for (auto &e : electrons) {{
-            for (auto &e_bar : positrons) {{
-            	// INVARIANT MASS
-                m_ee = (e + e_bar).M();             
-                // PT
-                pT_ee = (e + e_bar).Pt();
-                // ETA
-                eta_ee = (e + e_bar).Eta();
-                // PHI
-                phi_ee = std::abs(e.Phi() - e_bar.Phi());
+        //////////////////////////////////////////////////////////////////////
+        //////////////////////////////// PAIRS ///////////////////////////////
+        //////////////////////////////////////////////////////////////////////
+        TLorentzVector best_Z;        
+        for (auto e : Selectrons) {{
+            for (auto e_bar : Spositrons) {{
+                TLorentzVector Z = (e + e_bar);
+                m_ee = Z.M();
+                Z_p4.E = Z.E();
+                Z_p4.Px = Z.Px();
+                Z_p4.Py = Z.Py();
+                Z_p4.Pz = Z.Pz();
+                Z_p4.Pt = Z.Pt();
+                Z_angles.eta = Z.Eta();
+                Z_angles.phi = std::abs(e.Phi() - e_bar.Phi());
+                Z_angles.theta = Z.Theta();
+                deltaR_ee = std::sqrt((e.Eta() - e_bar.Eta())*(e.Eta() - e_bar.Eta()) + (e.Phi() - e_bar.Phi())*(e.Phi() - e_bar.Phi()));
                 ElectronPairs->Fill();
+
+                // Store best electron positron pair for BDT
+                if (std::abs(Z.M() - 91.2) < std::abs(best_Z.M() - 91.2)) {{
+                    best_Z = Z;
+                    best_deltaR_ee = deltaR_ee;
+                    best_Z_pT = Z.Pt();
+                }}
             }}
         }}
+
+        //////////////////////////////////////////////////////////////////////
+        //////////////////////////////// JETS ////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
+        for (int i = 0; i < branchJet->GetEntries(); i++) {{
+            Jet *jet = (Jet*) branchJet->At(i);
+            TLorentzVector p4 = jet->P4();
+            Sjets.push_back(p4);
+        }}
+        
+
+        TLorentzVector total_jet;
+        for (auto jet : Sjets) {{
+            jet_p4.E = jet.E();
+            jet_p4.Px = jet.Px();
+            jet_p4.Py = jet.Py();
+            jet_p4.Pz = jet.Pz();
+            jet_p4.Pt = jet.Pt();
+            jet_angle.eta = jet.Eta();
+            jet_angle.phi = jet.Phi();
+            jet_angle.theta = jet.Theta();
+            Jets->Fill();
+        }}
+
+        if (Sjets.size() > 0) {{
+            N_jets = Sjets.size();
+            
+        }}
+
+        BDT->Fill();
     }}
 
+    
     // SAVE histogram to file
     TFile outFile("variables.root", "RECREATE");
+    Electrons->Write();
+    Positrons->Write();
     ElectronPairs->Write();
+    Jets->Write();
+    BDT->Write();
     outFile.Close();
 
     // Clean up
     delete treeReader;
 }}
+//////////////////////////////////////////////////////////////////////
 '''
 
 # Create the ROOT script file and write the contents
