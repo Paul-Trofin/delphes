@@ -1,17 +1,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // THIS IS A FILE THAT TAKES AS INPUT ROOT VARIABLES FILES
 // SCALING FACTORS:
-// ff_z_ee : 1.524e-06 (signal)
-// ff_tata : 1.514e-06 (bkg -?)
-// ff_gm_ee: 3.633e-05 (bkg - red)
-// ttbar   : 6.574e-09
-// ff_zz   : 1.091e-11 (bkg - irr?)
-// ff_zw   : 9.020e-11 (bkg - irr?)
-// ff_ww   : 7.978e-10 (bkg - irr?)
-// ttbar   : 6.625e-09 (bkg - ?)
+// ff_z    : 1.521e-06 (signal)
+// ff_gm   : 3.633e-05 (bkg - 1)
+// ff_w    : 5.877e-05 (bkg - 2)
+// ff_tata : 1.514e-06 (bkg - 3)
 // RUN LIKE THIS:
 // SIGNAL FIRST, REST BACKGROUND
-// root -l stack_hist.C'({"processes/ff_z_ee/variables.root", "processes/ff_tata/variables.root", "processes/ff_gm_ee/variables.root", "processes/ttbar/variables.root"}, {1.524e-06, 1.514e-06, 3.633e-05, 6.574e-09})'
+// root -l stack_hist.C'({"processes/ff_z/variables.root", "processes/ff_gm/variables.root", "processes/ff_w/variables.root", "processes/ff_tata/variables.root"}, {1.524e-06, 3.633e-05, 5.877e-05, 1.514e-06})'
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -29,8 +25,20 @@
 #include <iostream>
 #include <map>
 
-void stack_hist(std::vector<std::string> inputFiles, std::vector<double> scales) {
-    if (inputFiles.size() < 2 || inputFiles.size() != scales.size()) {
+void stack_hist(std::vector<std::string> inputFiles, std::vector<double> crossSection) {
+
+    ///////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////// OPTIONS //////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////
+    // Number of Events per file (process)
+    Int_t N_events = 70000;
+    // Normalization procedure
+    // 1 - Normalization to 1
+    // 2 - Normalization to Integrated Luminosity
+    Int_t NORM = 2;
+    
+
+    if (inputFiles.size() < 2 || inputFiles.size() != crossSection.size()) {
         std::cerr << "** ERROR: Input file and scale vectors must have the same size and at least one background file." << std::endl;
         return;
     }
@@ -38,8 +46,12 @@ void stack_hist(std::vector<std::string> inputFiles, std::vector<double> scales)
     int nFiles = inputFiles.size();
     std::vector<TFile*> files(nFiles);
     std::vector<TTree*> trees(nFiles);
-    std::vector<std::string> branches = {"DielectronMass", "Z_p4.Pt", "Z_angles.eta", "Z_angles.phi", "Z_angles.theta", "deltaR_ee"};
-    std::vector<int> colors = {kGray+2, kBlue+2, kOrange+3, kGreen+2, kRed+2, kCyan+2, kYellow+2}; 
+    std::vector<std::string> branches = {"DielectronMass", "Dielectron_p4.Px", "Dielectron_p4.Py", "Dielectron_p4.Pz", "Dielectron_p4.Pt", "Dielectron_p4.eta", "Dielectron_p4.phi", "Dielectron_p4.theta", "DielectronDeltaR"};
+    std::vector<int> colors = {kGray+2, kGreen+3, kBlue+2, kRed+2, kCyan+2, kYellow+2};
+
+    for (int i = 0; i < nFiles; i++) {
+        crossSection[i] = crossSection[i] * 1e12; // Convert to fb
+    }
 
     struct stat info;
     if (stat("PLOTS", &info) != 0) {
@@ -62,13 +74,17 @@ void stack_hist(std::vector<std::string> inputFiles, std::vector<double> scales)
     }
 
     std::map<std::string, std::pair<double, double>> ranges = {
-        {"DielectronMass", {0, 200}},
-        {"deltaR_ee", {2, 5}},  // Fixed key mismatch
-        {"Z_p4.Pt", {0, 10}},
-        {"Z_angles.eta", {-10, 10}},
-        {"Z_angles.phi", {0, 2 * TMath::Pi()}},
-        {"Z_angles.theta", {0, TMath::Pi()}}
+        {"DielectronMass", {50, 150}},
+        {"DielectronDeltaR", {0, 7}},  // Fixed key mismatch
+        {"Dielectron_p4.Pt", {0, 50}},
+        {"Dielectron_p4.Px", {-50, 50}},
+        {"Dielectron_p4.Py", {-50, 50}},
+        {"Dielectron_p4.Pz", {-50, 50}},
+        {"Dielectron_angle.eta", {-10, 10}},
+        {"Dielectron_angle.phi", {0, 2 * TMath::Pi()}},
+        {"Dielectron_angle.theta", {0, TMath::Pi()}}
     };
+
 
     for (const auto& branch : branches) {
         if (ranges.find(branch) == ranges.end()) {
@@ -78,15 +94,46 @@ void stack_hist(std::vector<std::string> inputFiles, std::vector<double> scales)
 
         std::vector<TH1F*> hist(nFiles);
         for (int i = 0; i < nFiles; i++) {
-            hist[i] = new TH1F(Form("hist_%s_%d", branch.c_str(), i), branch.c_str(), 200, ranges[branch].first, ranges[branch].second);
+            hist[i] = new TH1F(Form("hist_%s_%d", branch.c_str(), i), branch.c_str(), 150, ranges[branch].first, ranges[branch].second);
             hist[i]->SetFillColor(colors[i % colors.size()]);
             hist[i]->SetLineColor(kBlack);
             hist[i]->SetLineWidth(2);
         }
-
+        
+        double Lint_total = 0;
+        double Hint_total = 0;
+        double Hint_final = 0;
+        double Lint_final = 0;
         for (int i = 0; i < nFiles; i++) {
-            trees[i]->Draw(Form("%s>>hist_%s_%d", branch.c_str(), branch.c_str(), i), "", "", 10000);
-            hist[i]->Scale(scales[i]);
+            trees[i]->Draw(Form("%s>>hist_%s_%d", branch.c_str(), branch.c_str(), i), "", "", N_events);
+            hist[i]->Scale(crossSection[i]);
+
+            // Histogram Integral Calculation
+            Hint_total += hist[i]->Integral();
+            // Total Integrated Luminosity calculation
+            Lint_total += N_events / crossSection[i];
+        }
+
+        if (NORM == 1) {
+            for (int i = 0; i < nFiles; i++) {
+                hist[i]->Scale(1.0 / Hint_total);
+            }
+            for (int i = 0; i < nFiles; i++) {
+                Hint_final += hist[i]->Integral();
+            }
+            std::cout << std::endl << "Hint_final = " << Hint_final << std::endl;
+                
+        }
+
+        if (NORM == 2) {
+            for (int i = 0; i < nFiles; i++) {
+                hist[i]->Scale(Lint_total / Hint_total);
+            }
+            for (int i = 0; i < nFiles; i++) {
+                Lint_final += hist[i]->Integral();
+            }
+            std::cout << std::endl << "Lint_final = " << Lint_final << " fb-1" << std::endl;
+            std::cout << std::endl << "Lint_total = " << Lint_total << " fb-1" << std::endl;
         }
 
         THStack* stack = new THStack(Form("stack_%s", branch.c_str()), "");
@@ -103,18 +150,63 @@ void stack_hist(std::vector<std::string> inputFiles, std::vector<double> scales)
         gPad->Update();  // Ensure ROOT registers the drawn histograms
 
         double maxY = stack->GetMaximum();
-        stack->SetMaximum(1.2 * maxY);  // Scale Y-axis
+        stack->SetMaximum(2 * maxY);  // Scale Y-axis
         c1->Modified();  // Force redraw with updated limits
         c1->Update();
 
-        TLegend* legend = new TLegend(0.7, 0.7, 0.9, 0.9);
+        TLegend* legend = new TLegend(0.67, 0.6, 0.9, 0.9);
         legend->SetTextSize(0.02);
         legend->SetFillStyle(0);
+        
         for (int i = 0; i < nFiles; i++) {
-            legend->AddEntry(hist[i], inputFiles[i].c_str(), "l");
-        }
+            // Extract the actual process name from the file path
+            std::string fileName = inputFiles[i];
+        
+            // Find the substring between "processes/" and "/variables.root"
+            size_t startPos = fileName.find("processes/") + std::string("processes/").length();
+            size_t endPos = fileName.find("/variables.root");
+            fileName = fileName.substr(startPos, endPos - startPos); // Extract the process name
+        
+            // Replace ff with f fbar
+            size_t pos = fileName.find("ff");
+            if (pos != std::string::npos) {
+                fileName.replace(pos, 2, "f fbar");
+            }
+        
+            // Replace gm with \gamma
+            pos = fileName.find("gm");
+            if (pos != std::string::npos) {
+                fileName.replace(pos, 2, "\\gamma");
+            }
+        
+            // Replace z with Z
+            pos = fileName.find("z");
+            if (pos != std::string::npos) {
+                fileName.replace(pos, 1, "Z");
+            }
+        
+            // Replace w with W
+            pos = fileName.find("w");
+            if (pos != std::string::npos) {
+                fileName.replace(pos, 1, "W");
+            }
+        
+            // Replace underscores with '->'
+            size_t posArrow = fileName.find('_');
+            while (posArrow != std::string::npos) {
+                fileName.replace(posArrow, 1, "->");
+                posArrow = fileName.find('_', posArrow + 1);
+            }
+        
+            // Create the legend entry with cross-section
+            std::string legendEntry = Form("%s \\quad \\quad (\\sigma = %.2e \\quad fb)", fileName.c_str(), crossSection[i]);
+        
+            // Add the entry to the legend
+            legend->AddEntry(hist[i], legendEntry.c_str(), "f");
+        }                 
+        
         legend->Draw();
-
+        
         gPad->RedrawAxis();
         c1->Update();
         c1->SaveAs(Form("PLOTS/%s.png", branch.c_str()));
