@@ -46,7 +46,7 @@ void stack_hist(std::vector<std::string> inputFiles, std::vector<double> crossSe
     int nFiles = inputFiles.size();
     std::vector<TFile*> files(nFiles);
     std::vector<TTree*> trees(nFiles);
-    std::vector<std::string> branches = {"DielectronMass", "Dielectron_p4.Px", "Dielectron_p4.Py", "Dielectron_p4.Pz", "Dielectron_p4.Pt", "Dielectron_p4.eta", "Dielectron_p4.phi", "Dielectron_p4.theta", "DielectronDeltaR"};
+    std::vector<std::string> branches = {"DielectronMass", "Dielectron_p4.Px", "Dielectron_p4.Py", "Dielectron_p4.Pz", "Dielectron_p4.Pt", "Dielectron_angle.eta", "Dielectron_angle.phi", "Dielectron_angle.theta", "DielectronDeltaR"};
     std::vector<int> colors = {kGray+2, kGreen+3, kBlue+2, kRed+2, kCyan+2, kYellow+2};
 
     for (int i = 0; i < nFiles; i++) {
@@ -212,4 +212,3 @@ void stack_hist(std::vector<std::string> inputFiles, std::vector<double> crossSe
         c1->SaveAs(Form("PLOTS/%s.png", branch.c_str()));
     }
 }
-
